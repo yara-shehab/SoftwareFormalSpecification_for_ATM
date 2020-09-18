@@ -1,0 +1,38 @@
+MODULE main 
+VAR
+  state:  {ATM_Idle, Card_Read , Password_Entry  , Choosing_Transaction, Withdraw, Deposit , Balance_Inquiry , Performing_Withdraw , Performing_Deposit , Performing_Balance_Inquiry ,Card_Ejected};
+  input: {Card_is_entered, Card_is_verified , Password_is_verified , Select_withdraw , select_deposit , select_balance_inquiry , transaction_finished , cancel_is_pressed , wrong_pass  ,invalid_card , amount_is_verified , show_balance,invalid_amount};
+ASSIGN 
+  init(state) := ATM_Idle; 
+
+  next(state) := case
+    state = ATM_Idle   & input = Card_is_entered     : Card_Read;
+    state = Card_Read  & input = Card_is_verified : Password_Entry ;
+    state = Card_Read  & input = invalid_card   : Card_Ejected;
+    state = Password_Entry  & input = Password_is_verified        : Choosing_Transaction;
+    state = Password_Entry & input = wrong_pass    : Card_Ejected;
+    
+    state = Choosing_Transaction & input = Select_withdraw    : Withdraw;
+    state = Choosing_Transaction & input = select_deposit    : Deposit;
+    state = Choosing_Transaction & input = select_balance_inquiry    : Balance_Inquiry;
+    
+    state = Withdraw & input =  amount_is_verified   : Performing_Withdraw;
+    state = Deposit & input =  amount_is_verified    : Performing_Deposit;
+    state = Balance_Inquiry   & input = show_balance   : Performing_Balance_Inquiry;
+    
+    state = Performing_Withdraw  & input =  transaction_finished : Card_Ejected;
+    state = Performing_Deposit & input =  transaction_finished   : Card_Ejected;
+    state = Performing_Balance_Inquiry   & input =  transaction_finished : Card_Ejected;
+    
+    state = Withdraw & input =  invalid_amount  : Card_Ejected;
+    state = Deposit & input =  invalid_amount  : Card_Ejected;
+    
+    state = Card_Read  & input = cancel_is_pressed  : Card_Ejected;
+    state = Password_Entry & input = cancel_is_pressed  : Card_Ejected;
+    state = Choosing_Transaction & input = cancel_is_pressed  : Card_Ejected;
+    TRUE : state; 
+  esac;
+
+SPEC AG ( ((state = Performing_Withdraw) | (state = Performing_Deposit) | (state = Performing_Balance_Inquiry)) & (input = transaction_finished  ) -> AX state = Card_Ejected );
+SPEC AG ( ((state = Card_Read) | (state = Password_Entry) | (state = Choosing_Transaction)) & input  = cancel_is_pressed  -> AX state = Card_Ejected );
+SPEC AG ( EF (state = Card_Ejected) );
